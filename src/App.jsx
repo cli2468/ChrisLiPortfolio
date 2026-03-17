@@ -7,6 +7,11 @@ import greenWitchCafeThumb from './assets/WorksThumbnails/GreenWitchCafe.png'
 import mrMillerThumb from './assets/WorksThumbnails/MrMiller.png'
 import visionThumb from './assets/WorksThumbnails/Vision.png'
 import royalTeaThumb from './assets/WorksThumbnails/RoyalTea.png'
+import underPressureMobile from './assets/WorksThumbnails/mobile/UnderPressureMobile.png'
+import greenWitchCafeMobile from './assets/WorksThumbnails/mobile/GWCMobile.png'
+import mrMillerMobile from './assets/WorksThumbnails/mobile/MMDetailingMobile.png'
+import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.png'
+import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.png'
 import './App.css'
 
 /* â”€â”€â”€ Intersection Observer hook for scroll reveals â”€â”€â”€ */
@@ -546,6 +551,7 @@ const projects = [
     year: '2026',
     desc: 'A clean, conversion-focused website for a pressure washing business with booking integration and service breakdowns.',
     thumbnail: underPressureThumb,
+    mobileThumbnail: underPressureMobile,
     thumbnailPosition: '52% 50%',
     detailPosition: '52% 50%',
     url: 'https://cli2468.github.io/UnderPressureLLC/',
@@ -557,6 +563,7 @@ const projects = [
     year: '2026',
     desc: 'A warm, inviting website for a local cafe featuring their menu, story, and online ordering experience.',
     thumbnail: greenWitchCafeThumb,
+    mobileThumbnail: greenWitchCafeMobile,
     thumbnailPosition: '56% 50%',
     detailPosition: '56% 50%',
     url: 'https://cli2468.github.io/GreenWitchCafe/',
@@ -568,6 +575,7 @@ const projects = [
     year: '2026',
     desc: 'A sleek website for a mobile auto detailing service, designed to drive bookings and showcase their work.',
     thumbnail: mrMillerThumb,
+    mobileThumbnail: mrMillerMobile,
     thumbnailPosition: '60% 50%',
     detailPosition: '60% 50%',
     url: 'https://mrmillersmobiledetailing.com/',
@@ -579,6 +587,7 @@ const projects = [
     year: '2025',
     desc: 'An order parsing and financial database management tool built to streamline my e-commerce reselling operations.',
     thumbnail: visionThumb,
+    mobileThumbnail: visionMobile,
     thumbnailPosition: '50% 50%',
     detailPosition: '50% 50%',
     url: 'https://cli2468.github.io/Vision/',
@@ -590,6 +599,7 @@ const projects = [
     year: '2025',
     desc: 'A website built for family, bringing their tea brand to life with a modern, elegant digital presence.',
     thumbnail: royalTeaThumb,
+    mobileThumbnail: royalTeaMobile,
     thumbnailPosition: '50% 50%',
     detailPosition: '50% 50%',
     url: 'https://royalteaone.com/',
@@ -832,13 +842,15 @@ function MobileWorkCarousel() {
               className={`work-carousel__card${activeIndex === index ? ' work-carousel__card--active' : ''}`}
               aria-label={`Visit ${project.title}`}
             >
-              <div className="work-carousel__card-inner">
-                <img
-                  src={project.thumbnail}
-                  alt={`${project.title} thumbnail`}
-                  className="work-carousel__image"
-                  style={{ objectPosition: project.thumbnailPosition }}
-                />
+              <div className="phone-frame">
+                <div className="phone-frame__notch" />
+                <div className="phone-frame__screen">
+                  <img
+                    src={project.mobileThumbnail}
+                    alt={`${project.title} mobile preview`}
+                    className="phone-frame__image"
+                  />
+                </div>
               </div>
             </a>
           ))}
