@@ -850,12 +850,13 @@ function MobileWorkCarousel() {
                   <div className="phone-frame__notch" />
                   <div className="phone-frame__screen">
                     <img
-                      src={project.mobileThumbnail}
-                      alt={`${project.title} mobile preview`}
-                      className="phone-frame__image"
-                    />
-                  </div>
+                    src={project.mobileThumbnail}
+                    alt={`${project.title} mobile preview`}
+                    className="phone-frame__image"
+                    draggable={false}
+                  />
                 </div>
+              </div>
               </a>
             ))}
           </div>
