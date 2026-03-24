@@ -86,7 +86,7 @@ function ThemeToggle({ theme, onToggle }) {
 
 /* â"€â"€â"€ Mobile detection context â"€â"€â"€ */
 const MobileContext = createContext(false)
-const INTRO_NAME = 'Chris Li'
+const INTRO_NAME = 'Chris Li.'
 const INTRO_EXIT_DURATION_MS = 820
 
 function MobileProvider({ children }) {
@@ -610,7 +610,7 @@ function IntroPreloader({ onComplete }) {
     }
 
     if (phase === 'pausing') {
-      const t = setTimeout(() => setPhase('deleting'), 1450)
+      const t = setTimeout(() => setPhase('deleting'), 1200)
       return () => clearTimeout(t)
     }
 
@@ -769,27 +769,41 @@ const visibleProjects = projects.filter((project) => project.isVisible !== false
 /* â"€â"€â"€ Custom "VIEW" cursor for work cards â"€â"€â"€ */
 function ViewCursor() {
   const cursorRef = useRef(null)
-  const posRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 })
+  const posRef = useRef({ x: 0, y: 0 })
   const visibleRef = useRef(false)
   const [visible, setVisible] = useState(false)
-  const animRef = useRef(null)
 
   useEffect(() => {
     function getCardInner(target) {
       return target instanceof Element ? target.closest('.work-scroll__card-inner') : null
     }
 
-    function handleMouseMove(e) {
-      posRef.current.targetX = e.clientX
-      posRef.current.targetY = e.clientY
+    function setCursorPosition(x, y) {
+      posRef.current.x = x
+      posRef.current.y = y
+
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`
+      }
+    }
+
+    function handlePointerMove(e) {
+      const samples = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null
+      const latestEvent = samples && samples.length ? samples[samples.length - 1] : e
+      setCursorPosition(latestEvent.clientX, latestEvent.clientY)
     }
 
     function handleOver(e) {
       if (getCardInner(e.target)) {
         visibleRef.current = true
         setVisible(true)
+
+        if ('clientX' in e && 'clientY' in e) {
+          setCursorPosition(e.clientX, e.clientY)
+        }
       }
     }
+
     function handleOut(e) {
       const fromCard = getCardInner(e.target)
       const toCard = getCardInner(e.relatedTarget)
@@ -800,27 +814,16 @@ function ViewCursor() {
       }
     }
 
-    window.addEventListener('mousemove', handleMouseMove)
+    const moveEventName = 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove'
+
+    window.addEventListener(moveEventName, handlePointerMove, { passive: true })
     document.addEventListener('mouseover', handleOver)
     document.addEventListener('mouseout', handleOut)
 
-    function tick() {
-      const p = posRef.current
-      p.x += (p.targetX - p.x) * 0.15
-      p.y += (p.targetY - p.y) * 0.15
-      if (cursorRef.current) {
-        const s = visibleRef.current ? 1 : 0.6
-        cursorRef.current.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) scale(${s})`
-      }
-      animRef.current = requestAnimationFrame(tick)
-    }
-    tick()
-
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener(moveEventName, handlePointerMove)
       document.removeEventListener('mouseover', handleOver)
       document.removeEventListener('mouseout', handleOut)
-      cancelAnimationFrame(animRef.current)
     }
   }, [])
 
