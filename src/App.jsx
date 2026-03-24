@@ -187,7 +187,7 @@ function PageTransition({ children }) {
   )
 }
 
-/* â"€â"€â"€ Wavy Dot Grid Hero â€" Marble/Indent Effect â"€â"€â"€ */
+/* Wavy Dot Grid Hero */
 function WavyGrid({ containerRef }) {
   const canvasRef = useRef(null)
   const mouseRef = useRef({ x: -1000, y: -1000 })
@@ -215,7 +215,6 @@ function WavyGrid({ containerRef }) {
     resize()
     window.addEventListener('resize', resize)
 
-    // Track mouse on the parent section so it works even over the text
     function handleMouse(e) {
       const rect = canvas.getBoundingClientRect()
       mouseRef.current = {
@@ -273,7 +272,7 @@ function WavyGrid({ containerRef }) {
 
           if (dist < influenceRadius) {
             const force = (1 - dist / influenceRadius)
-            const smoothForce = force * force * (3 - 2 * force) // smoothstep
+            const smoothForce = force * force * (3 - 2 * force)
             const angle = Math.atan2(diffY, diffX)
             dx = -Math.cos(angle) * smoothForce * maxDisplacement
             dy = -Math.sin(angle) * smoothForce * maxDisplacement
@@ -601,7 +600,7 @@ function IntroPreloader({ onComplete }) {
         const t = setTimeout(() => {
           setDisplay(INTRO_NAME.slice(0, next))
           setCharIndex(next)
-        }, charIndex === 0 ? 220 : 105)
+        }, charIndex === 0 ? 185 : 60)
         return () => clearTimeout(t)
       }
 
@@ -610,7 +609,7 @@ function IntroPreloader({ onComplete }) {
     }
 
     if (phase === 'pausing') {
-      const t = setTimeout(() => setPhase('deleting'), 1200)
+      const t = setTimeout(() => setPhase('deleting'), 650)
       return () => clearTimeout(t)
     }
 
@@ -620,7 +619,7 @@ function IntroPreloader({ onComplete }) {
         const t = setTimeout(() => {
           setDisplay(INTRO_NAME.slice(0, next))
           setCharIndex(next)
-        }, 65)
+        }, 35)
         return () => clearTimeout(t)
       }
 
