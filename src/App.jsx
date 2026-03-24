@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, useCallback } from 'react'
+﻿import { useEffect, useRef, useState, useCallback, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { Routes, Route, Link, useLocation, useParams } from 'react-router-dom'
 import Lenis from 'lenis'
@@ -14,7 +14,7 @@ import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.png'
 import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.png'
 import './App.css'
 
-/* â”€â”€â”€ Intersection Observer hook for scroll reveals â”€â”€â”€ */
+/* â"€â"€â"€ Intersection Observer hook for scroll reveals â"€â"€â"€ */
 function useReveal() {
   const ref = useRef(null)
   useEffect(() => {
@@ -48,18 +48,62 @@ function Reveal({ children, className = '', delay = 0, as: Tag = 'div' }) {
   )
 }
 
-/* â”€â”€â”€ Mobile detection hook â”€â”€â”€ */
-function useIsMobile() {
+/* â"€â"€â"€ Theme hook â"€â"€â"€ */
+function useTheme() {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'dark'
+  })
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+  const toggle = useCallback(() => setTheme(t => t === 'dark' ? 'light' : 'dark'), [])
+  return { theme, toggle }
+}
+
+/* --- Theme toggle button --- */
+function ThemeToggle({ theme, onToggle }) {
+  const isSun = theme === 'dark'
+  return (
+    <button
+      className="theme-toggle"
+      onClick={onToggle}
+      aria-label={isSun ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {isSun ? (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+/* â"€â"€â"€ Mobile detection context â"€â"€â"€ */
+const MobileContext = createContext(false)
+const INTRO_NAME = 'Chris Li'
+const INTRO_EXIT_DURATION_MS = 820
+
+function MobileProvider({ children }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth <= 768)
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
   }, [])
-  return isMobile
+  return <MobileContext.Provider value={isMobile}>{children}</MobileContext.Provider>
 }
 
-/* â”€â”€â”€ Animated text swap (fade only, no movement) â”€â”€â”€ */
+function useIsMobile() {
+  return useContext(MobileContext)
+}
+
+/* â"€â"€â"€ Animated text swap (fade only, no movement) â"€â"€â"€ */
 function AnimatedText({ text, className = '', tag: Tag = 'span' }) {
   const [displayed, setDisplayed] = useState(text)
   const [animating, setAnimating] = useState(false)
@@ -81,12 +125,13 @@ function AnimatedText({ text, className = '', tag: Tag = 'span' }) {
   )
 }
 
-/* â”€â”€â”€ Mask counter â€” directional slide reveal â”€â”€â”€ */
+/* â"€â"€â"€ Mask counter â€" directional slide reveal â"€â"€â"€ */
 function MaskCounter({ value, className = '' }) {
   const [displayed, setDisplayed] = useState(value)
   const [direction, setDirection] = useState(1)
   const [animState, setAnimState] = useState('idle')
   const innerRef = useRef(null)
+  const t2Ref = useRef(null)
 
   useEffect(() => {
     if (value === displayed) return
@@ -97,10 +142,12 @@ function MaskCounter({ value, className = '' }) {
     const t = setTimeout(() => {
       setDisplayed(value)
       setAnimState('enter')
-      const t2 = setTimeout(() => setAnimState('idle'), 250)
-      return () => clearTimeout(t2)
+      t2Ref.current = setTimeout(() => setAnimState('idle'), 250)
     }, 200)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      clearTimeout(t2Ref.current)
+    }
   }, [value, displayed])
 
   // On enter: snap to start position then animate in
@@ -131,7 +178,7 @@ function MaskCounter({ value, className = '' }) {
   )
 }
 
-/* â”€â”€â”€ Page transition wrapper â”€â”€â”€ */
+/* â"€â"€â"€ Page transition wrapper â"€â"€â"€ */
 function PageTransition({ children }) {
   return (
     <div className="page-transition page-enter">
@@ -140,11 +187,12 @@ function PageTransition({ children }) {
   )
 }
 
-/* â”€â”€â”€ Wavy Dot Grid Hero â€” Marble/Indent Effect â”€â”€â”€ */
+/* â"€â"€â"€ Wavy Dot Grid Hero â€" Marble/Indent Effect â"€â"€â"€ */
 function WavyGrid({ containerRef }) {
   const canvasRef = useRef(null)
   const mouseRef = useRef({ x: -1000, y: -1000 })
   const animRef = useRef(null)
+  const visibleRef = useRef(true)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -183,9 +231,24 @@ function WavyGrid({ containerRef }) {
     container.addEventListener('mousemove', handleMouse)
     container.addEventListener('mouseleave', handleMouseLeave)
 
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let time = 0
+    let dotRgb = '255, 255, 255'
+    let dotOpacityScale = 0.4
+
+    function readDotTokens() {
+      const styles = getComputedStyle(document.documentElement)
+      dotRgb = styles.getPropertyValue('--grid-dot-rgb').trim() || dotRgb
+      dotOpacityScale = parseFloat(styles.getPropertyValue('--grid-dot-opacity-scale')) || dotOpacityScale
+    }
+    readDotTokens()
+
+    const themeObs = new MutationObserver(readDotTokens)
+    themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
     function draw() {
-      time += 0.008
+      if (!visibleRef.current) { animRef.current = null; return }
+      if (!prefersReducedMotion) time += 0.008
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
       ctx.clearRect(0, 0, w, h)
@@ -212,10 +275,8 @@ function WavyGrid({ containerRef }) {
             const force = (1 - dist / influenceRadius)
             const smoothForce = force * force * (3 - 2 * force) // smoothstep
             const angle = Math.atan2(diffY, diffX)
-            // Inward: dots are PULLED TOWARD the mouse (negative direction)
             dx = -Math.cos(angle) * smoothForce * maxDisplacement
             dy = -Math.sin(angle) * smoothForce * maxDisplacement
-            // Dots shrink near center to create depth/indent illusion
             distortScale = 1 - smoothForce * 0.6
           }
 
@@ -230,7 +291,7 @@ function WavyGrid({ containerRef }) {
 
           ctx.beginPath()
           ctx.arc(x, y, Math.max(0.3, dotRadius * distortScale), 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.4})`
+          ctx.fillStyle = `rgba(${dotRgb}, ${opacity * dotOpacityScale})`
           ctx.fill()
         }
       }
@@ -240,8 +301,20 @@ function WavyGrid({ containerRef }) {
 
     draw()
 
+    const visObs = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting
+        if (entry.isIntersecting && !animRef.current) draw()
+      },
+      { threshold: 0 }
+    )
+    visObs.observe(canvas)
+
     return () => {
       cancelAnimationFrame(animRef.current)
+      animRef.current = null
+      visObs.disconnect()
+      themeObs.disconnect()
       window.removeEventListener('resize', resize)
       container.removeEventListener('mousemove', handleMouse)
       container.removeEventListener('mouseleave', handleMouseLeave)
@@ -251,7 +324,7 @@ function WavyGrid({ containerRef }) {
   return <canvas ref={canvasRef} className="wavy-grid" />
 }
 
-/* â”€â”€â”€ Typing animation hook â”€â”€â”€ */
+/* â"€â"€â"€ Typing animation hook â"€â"€â"€ */
 function useTypingLoop(words, typingSpeed = 80, deletingSpeed = 40, pauseMs = 2000) {
   const [display, setDisplay] = useState('')
   const [wordIndex, setWordIndex] = useState(0)
@@ -270,7 +343,7 @@ function useTypingLoop(words, typingSpeed = 80, deletingSpeed = 40, pauseMs = 20
         }, typingSpeed)
         return () => clearTimeout(t)
       }
-      // Finished typing â€” pause
+      // Finished typing â€" pause
       setPhase('pausing')
       return
     }
@@ -289,7 +362,7 @@ function useTypingLoop(words, typingSpeed = 80, deletingSpeed = 40, pauseMs = 20
         }, deletingSpeed)
         return () => clearTimeout(t)
       }
-      // Finished deleting â€” move to next word
+      // Finished deleting â€" move to next word
       setWordIndex((wordIndex + 1) % words.length)
       setPhase('typing')
       return
@@ -299,7 +372,7 @@ function useTypingLoop(words, typingSpeed = 80, deletingSpeed = 40, pauseMs = 20
   return display
 }
 
-/* â”€â”€â”€ Interactive ASCII Donut â”€â”€â”€ */
+/* â"€â"€â"€ Interactive ASCII Donut â"€â"€â"€ */
 function AsciiDonut() {
   const isMobile = useIsMobile()
   const preRef = useRef(null)
@@ -312,6 +385,7 @@ function AsciiDonut() {
     lastX: 0, lastY: 0,
   })
   const animRef = useRef(null)
+  const visibleRef = useRef(true)
 
   useEffect(() => {
     const pre = preRef.current
@@ -327,16 +401,22 @@ function AsciiDonut() {
     const donutScale = isMobile ? 0.896 : 0.448
     const K1 = cols * K2 * 3 / (8 * (R1 + R2)) * donutScale
     const chars = '.,-~:;=!*#$@'
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     function renderFrame() {
+      if (!visibleRef.current) { animRef.current = null; return }
       const s = stateRef.current
 
-      // Apply auto-spin + velocity
+      // Apply auto-spin + velocity (skip auto-spin for reduced motion)
       if (!s.dragging) {
         s.velA *= 0.95 // friction
         s.velB *= 0.95
-        s.A += s.autoA + s.velA
-        s.B += s.autoB + s.velB
+        if (!prefersReducedMotion) {
+          s.A += s.autoA
+          s.B += s.autoB
+        }
+        s.A += s.velA
+        s.B += s.velB
         // Decay velocity toward zero
         if (Math.abs(s.velA) < 0.0001) s.velA = 0
         if (Math.abs(s.velB) < 0.0001) s.velB = 0
@@ -390,7 +470,21 @@ function AsciiDonut() {
     }
 
     renderFrame()
-    return () => cancelAnimationFrame(animRef.current)
+
+    const visObs = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting
+        if (entry.isIntersecting && !animRef.current) renderFrame()
+      },
+      { threshold: 0 }
+    )
+    visObs.observe(pre)
+
+    return () => {
+      cancelAnimationFrame(animRef.current)
+      animRef.current = null
+      visObs.disconnect()
+    }
   }, [isMobile])
 
   // Drag handlers
@@ -426,12 +520,14 @@ function AsciiDonut() {
     <div className="ascii-donut">
       <div
         className="ascii-donut__gesture-area"
+        role="img"
+        aria-label="Interactive 3D ASCII donut animation — drag to spin"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <pre ref={preRef} className="ascii-donut__pre" />
+        <pre ref={preRef} className="ascii-donut__pre" aria-hidden="true" />
       </div>
       <span
         className={`ascii-donut__hint${showHint ? '' : ' ascii-donut__hint--hidden'}${isMobile && showHint ? ' ascii-donut__hint--pulse' : ''}`}
@@ -477,8 +573,92 @@ function Hero() {
   )
 }
 
-/* â”€â”€â”€ Navbar â”€â”€â”€ */
-function Navbar() {
+function IntroPreloader({ onComplete }) {
+  const [display, setDisplay] = useState('')
+  const [charIndex, setCharIndex] = useState(0)
+  const [phase, setPhase] = useState('typing')
+  const [isExiting, setIsExiting] = useState(false)
+  const [prefersReducedMotion] = useState(() => {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      const revealTimer = setTimeout(() => setDisplay(INTRO_NAME), 80)
+      const exitTimer = setTimeout(() => setIsExiting(true), 240)
+      const completeTimer = setTimeout(onComplete, 360)
+
+      return () => {
+        clearTimeout(revealTimer)
+        clearTimeout(exitTimer)
+        clearTimeout(completeTimer)
+      }
+    }
+
+    if (phase === 'typing') {
+      if (charIndex < INTRO_NAME.length) {
+        const next = charIndex + 1
+        const t = setTimeout(() => {
+          setDisplay(INTRO_NAME.slice(0, next))
+          setCharIndex(next)
+        }, charIndex === 0 ? 220 : 105)
+        return () => clearTimeout(t)
+      }
+
+      setPhase('pausing')
+      return
+    }
+
+    if (phase === 'pausing') {
+      const t = setTimeout(() => setPhase('deleting'), 1450)
+      return () => clearTimeout(t)
+    }
+
+    if (phase === 'deleting') {
+      if (charIndex > 0) {
+        const next = charIndex - 1
+        const t = setTimeout(() => {
+          setDisplay(INTRO_NAME.slice(0, next))
+          setCharIndex(next)
+        }, 65)
+        return () => clearTimeout(t)
+      }
+
+      setPhase('exiting')
+      return
+    }
+
+    if (phase === 'exiting') {
+      const t = setTimeout(() => setIsExiting(true), 160)
+      return () => clearTimeout(t)
+    }
+  }, [charIndex, onComplete, phase, prefersReducedMotion])
+
+  useEffect(() => {
+    if (!isExiting || prefersReducedMotion) return
+
+    const t = setTimeout(onComplete, INTRO_EXIT_DURATION_MS)
+    return () => clearTimeout(t)
+  }, [isExiting, onComplete, prefersReducedMotion])
+
+  return (
+    <div className={`intro-preloader${isExiting ? ' intro-preloader--exit' : ''}`} role="status" aria-live="polite">
+      <span className="sr-only">Loading Chris Li portfolio.</span>
+      <div className="intro-preloader__inner" aria-hidden="true">
+        <div className="intro-preloader__line">
+          <span className="intro-preloader__measure">{INTRO_NAME}|</span>
+          <span className="intro-preloader__content">
+            <span className="intro-preloader__typed">{display}</span>
+            <span className="intro-preloader__cursor">|</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* â"€â"€â"€ Navbar â"€â"€â"€ */
+function Navbar({ theme, toggleTheme }) {
   const location = useLocation()
   const isMobile = useIsMobile()
 
@@ -488,8 +668,7 @@ function Navbar() {
         <div className="nav-pill__inner">
           <a href="#hero" className="nav-logo">C.</a>
           <div className="nav-links">
-            <a href="#about">About</a>
-            <a href="#work">Work</a>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <a href="#contact" className="nav-cta">
               <span>Let's Talk</span>
               <span className="nav-cta__arrow">&rarr;</span>
@@ -507,6 +686,7 @@ function Navbar() {
         <div className="nav-links">
           <Link to="/work" className={location.pathname === '/work' ? 'active' : ''}>Work</Link>
           <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>About</Link>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <Link to="/contact" className="nav-cta">
             <span>Let's Talk</span>
             <span className="nav-cta__arrow">&rarr;</span>
@@ -517,31 +697,9 @@ function Navbar() {
   )
 }
 
-/* â”€â”€â”€ About / Motivation (home page) â”€â”€â”€ */
-function AboutBrief() {
-  return (
-    <section id="about" className="motivation">
-      <div className="motivation__inner">
-        <div className="motivation__left">
-          <Reveal>
-            <p className="motivation__body">
-              I've been early to most things I've gotten into - crypto before it blew up, beta tester for GPT before ChatGPT went public, e-commerce before I could legally sign a lease. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. Now I build websites. Whatever I'm doing next year might be different, but the way I get there won't be - I find things early, learn them fast, and make something real with them.
-            </p>
-          </Reveal>
-        </div>
-        <div className="motivation__right">
-          <Reveal delay={150}>
-            <div className="motivation__image-placeholder">
-              <span>Photo</span>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  )
-}
+/* â"€â"€â"€ Sticky Scroll Works Section â"€â"€â"€ */
+const SHOW_GREEN_WITCH_CAFE = false
 
-/* â”€â”€â”€ Sticky Scroll Works Section â”€â”€â”€ */
 const projects = [
   {
     slug: 'under-pressure',
@@ -553,12 +711,12 @@ const projects = [
     mobileThumbnail: underPressureMobile,
     thumbnailPosition: '52% 50%',
     detailPosition: '52% 50%',
-    url: 'https://cli2468.github.io/UnderPressureLLC/',
+    url: 'https://underpressureexterior.com/',
   },
   {
     slug: 'green-witch-cafe',
     title: 'GREEN WITCH CAFE',
-    category: 'Client / Website',
+    category: 'Concept / Mockup',
     year: '2026',
     desc: 'A warm, inviting website for a local cafe featuring their menu, story, and online ordering experience.',
     thumbnail: greenWitchCafeThumb,
@@ -566,6 +724,7 @@ const projects = [
     thumbnailPosition: '56% 50%',
     detailPosition: '56% 50%',
     url: 'https://cli2468.github.io/GreenWitchCafe/',
+    isVisible: SHOW_GREEN_WITCH_CAFE,
   },
   {
     slug: 'mr-millers-detailing',
@@ -605,7 +764,9 @@ const projects = [
   },
 ]
 
-/* â”€â”€â”€ Custom "VIEW" cursor for work cards â”€â”€â”€ */
+const visibleProjects = projects.filter((project) => project.isVisible !== false)
+
+/* â"€â"€â"€ Custom "VIEW" cursor for work cards â"€â"€â"€ */
 function ViewCursor() {
   const cursorRef = useRef(null)
   const posRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 })
@@ -687,6 +848,7 @@ function WorkStickyScroll() {
 function DesktopWorkStickyScroll() {
   const sectionRef = useRef(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const activeProject = visibleProjects[activeIndex] ?? visibleProjects[0]
 
   useEffect(() => {
     const section = sectionRef.current
@@ -715,9 +877,9 @@ function DesktopWorkStickyScroll() {
       <ViewCursor />
       <div className="work-scroll__container">
         <div className="work-scroll__left">
-          {projects.map((project, i) => (
+          {visibleProjects.map((project, i) => (
             <div
-              key={project.title}
+              key={project.slug}
               className={`work-scroll__card ${activeIndex === i ? 'work-scroll__card--active' : ''}`}
               data-index={i}
             >
@@ -728,6 +890,7 @@ function DesktopWorkStickyScroll() {
                       src={project.thumbnail}
                       alt={`${project.title} thumbnail`}
                       className="work-scroll__thumbnail"
+                      loading="lazy"
                       style={{ objectPosition: project.thumbnailPosition }}
                     />
                   </div>
@@ -748,12 +911,12 @@ function DesktopWorkStickyScroll() {
             <div className="work-scroll__counter">
               [ <MaskCounter value={String(activeIndex + 1).padStart(2, '0')} className="work-scroll__counter-current" />
               <span className="work-scroll__counter-sep"> / </span>
-              <span className="work-scroll__counter-total">{String(projects.length).padStart(2, '0')}</span> ]
+              <span className="work-scroll__counter-total">{String(visibleProjects.length).padStart(2, '0')}</span> ]
             </div>
 
-            <AnimatedText text={projects[activeIndex].title} className="work-scroll__title" tag="h3" />
-            <AnimatedText text={projects[activeIndex].category} className="work-scroll__category" tag="p" />
-            <AnimatedText text={projects[activeIndex].desc} className="work-scroll__desc" tag="p" />
+            <AnimatedText text={activeProject.title} className="work-scroll__title" tag="h3" />
+            <AnimatedText text={activeProject.category} className="work-scroll__category" tag="p" />
+            <AnimatedText text={activeProject.desc} className="work-scroll__desc" tag="p" />
           </div>
         </div>
       </div>
@@ -809,7 +972,7 @@ function MobileWorkCarousel() {
     }
   }, [])
 
-  const activeProject = projects[activeIndex]
+  const activeProject = visibleProjects[activeIndex] ?? visibleProjects[0]
 
   return (
     <section id="work" className="work-scroll work-scroll--mobile">
@@ -825,7 +988,7 @@ function MobileWorkCarousel() {
           <div className="work-carousel__counter">
             [ <MaskCounter value={String(activeIndex + 1).padStart(2, '0')} className="work-carousel__counter-current" />
             <span className="work-carousel__counter-sep"> / </span>
-            <span className="work-carousel__counter-total">{String(projects.length).padStart(2, '0')}</span> ]
+            <span className="work-carousel__counter-total">{String(visibleProjects.length).padStart(2, '0')}</span> ]
           </div>
 
           <div key={activeProject.slug} className="work-carousel__meta-swap">
@@ -836,8 +999,24 @@ function MobileWorkCarousel() {
         </Reveal>
 
         <Reveal delay={120}>
-          <div ref={trackRef} className="work-carousel__track" aria-label="Project carousel">
-            {projects.map((project, index) => (
+          <div
+            ref={trackRef}
+            className="work-carousel__track"
+            role="region"
+            aria-label="Project carousel"
+            aria-roledescription="carousel"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (!trackRef.current) return
+              const cards = trackRef.current.querySelectorAll('.work-carousel__card')
+              if (e.key === 'ArrowRight' && activeIndex < visibleProjects.length - 1) {
+                cards[activeIndex + 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+              } else if (e.key === 'ArrowLeft' && activeIndex > 0) {
+                cards[activeIndex - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+              }
+            }}
+          >
+            {visibleProjects.map((project, index) => (
               <a
                 key={project.slug}
                 href={project.url}
@@ -853,6 +1032,7 @@ function MobileWorkCarousel() {
                     src={project.mobileThumbnail}
                     alt={`${project.title} mobile preview`}
                     className="phone-frame__image"
+                    loading="lazy"
                     draggable={false}
                   />
                 </div>
@@ -872,7 +1052,18 @@ function MobileWorkCarousel() {
 }
 
 
-/* â”€â”€â”€ Contact â”€â”€â”€ */
+/* â"€â"€â"€ Shared social icons â"€â"€â"€ */
+function LinkedInIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+}
+function GitHubIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+}
+function EmailIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/></svg>
+}
+
+/* â"€â"€â"€ Contact â"€â"€â"€ */
 function Contact() {
   return (
     <section id="contact" className="contact">
@@ -895,22 +1086,16 @@ function Contact() {
       </Reveal>
       <Reveal delay={300}>
         <div className="contact__socials">
-          <a href="https://www.linkedin.com/in/chrisjoshli/" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="LinkedIn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-          </a>
-          <a href="https://github.com/chrisjoshli" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="mailto:lichristopher2468@gmail.com" className="contact__social-icon" aria-label="Email">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/></svg>
-          </a>
+          <a href="https://www.linkedin.com/in/chrisjoshli/" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="LinkedIn"><LinkedInIcon /></a>
+          <a href="https://github.com/chrisjoshli" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="GitHub"><GitHubIcon /></a>
+          <a href="mailto:lichristopher2468@gmail.com" className="contact__social-icon" aria-label="Email"><EmailIcon /></a>
         </div>
       </Reveal>
     </section>
   )
 }
 
-/* â”€â”€â”€ Footer â”€â”€â”€ */
+/* â"€â"€â"€ Footer â"€â"€â"€ */
 function Footer() {
   return (
     <footer className="footer">
@@ -922,16 +1107,17 @@ function Footer() {
   )
 }
 
-/* â”€â”€â”€ Noise overlay â”€â”€â”€ */
+/* â"€â"€â"€ Noise overlay â"€â"€â"€ */
 function NoiseOverlay() {
   return <div className="noise-overlay" aria-hidden="true" />
 }
 
-/* â”€â”€â”€ Project Detail Page â”€â”€â”€ */
+
+/* â"€â"€â"€ Project Detail Page â"€â"€â"€ */
 function ProjectDetailPage() {
   const { slug } = useParams()
-  const project = projects.find(p => p.slug === slug)
-  const projectIndex = projects.findIndex(p => p.slug === slug)
+  const project = visibleProjects.find(p => p.slug === slug)
+  const projectIndex = visibleProjects.findIndex(p => p.slug === slug)
 
   if (!project) {
     return (
@@ -944,8 +1130,8 @@ function ProjectDetailPage() {
     )
   }
 
-  const prevProject = projectIndex > 0 ? projects[projectIndex - 1] : null
-  const nextProject = projectIndex < projects.length - 1 ? projects[projectIndex + 1] : null
+  const prevProject = projectIndex > 0 ? visibleProjects[projectIndex - 1] : null
+  const nextProject = projectIndex < visibleProjects.length - 1 ? visibleProjects[projectIndex + 1] : null
 
   return (
     <section className="project-detail">
@@ -973,6 +1159,7 @@ function ProjectDetailPage() {
               src={project.thumbnail}
               alt={`${project.title} preview`}
               className="project-detail__media-image"
+              loading="lazy"
               style={{ objectPosition: project.detailPosition }}
             />
           </div>
@@ -1016,7 +1203,20 @@ function ProjectDetailPage() {
   )
 }
 
-/* â”€â”€â”€ Page: Home â”€â”€â”€ */
+/* â"€â"€â"€ Page: 404 â"€â"€â"€ */
+function NotFoundPage() {
+  return (
+    <section className="contact">
+      <h1 className="section-heading">Page not found</h1>
+      <Link to="/" className="contact__cta">
+        <span>Back to Home</span>
+        <span className="contact__cta-arrow"><span>&rarr;</span></span>
+      </Link>
+    </section>
+  )
+}
+
+/* â"€â"€â"€ Page: Home â"€â"€â"€ */
 function HomePage() {
   return (
     <>
@@ -1025,12 +1225,12 @@ function HomePage() {
   )
 }
 
-/* â”€â”€â”€ Page: Work â”€â”€â”€ */
+/* â"€â"€â"€ Page: Work â"€â"€â"€ */
 function WorkPage() {
   return <WorkStickyScroll />
 }
 
-/* â”€â”€â”€ Page: About â”€â”€â”€ */
+/* â"€â"€â"€ Page: About â"€â"€â"€ */
 function AboutPage() {
   const experienceEntries = [
     {
@@ -1077,7 +1277,7 @@ function AboutPage() {
     <section className="about">
       <div className="about__container">
 
-        {/* Left â€” Facts + Socials */}
+        {/* Left â€" Facts + Socials */}
         <div className="about__left">
           <div className="about__left-sticky">
             <Reveal>
@@ -1106,33 +1306,30 @@ function AboutPage() {
             </Reveal>
             <div className="about__socials">
               <Reveal delay={240}>
-                <a href="https://www.linkedin.com/in/chrisjoshli/" target="_blank" rel="noopener noreferrer" className="about__social-icon" aria-label="LinkedIn">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                </a>
+                <a href="https://www.linkedin.com/in/chrisjoshli/" target="_blank" rel="noopener noreferrer" className="about__social-icon" aria-label="LinkedIn"><LinkedInIcon /></a>
               </Reveal>
               <Reveal delay={280}>
-                <a href="https://github.com/chrisjoshli" target="_blank" rel="noopener noreferrer" className="about__social-icon" aria-label="GitHub">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-                </a>
+                <a href="https://github.com/chrisjoshli" target="_blank" rel="noopener noreferrer" className="about__social-icon" aria-label="GitHub"><GitHubIcon /></a>
               </Reveal>
               <Reveal delay={320}>
-                <a href="mailto:lichristopher2468@gmail.com" className="about__social-icon" aria-label="Email">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/></svg>
-                </a>
+                <a href="mailto:lichristopher2468@gmail.com" className="about__social-icon" aria-label="Email"><EmailIcon /></a>
               </Reveal>
             </div>
           </div>
         </div>
 
-        {/* Right â€” Editorial intro + Resume */}
+        {/* Right â€" Editorial intro + Resume */}
         <div className="about__right">
 
-          {/* Editorial intro â€” display font, no pill */}
+          {/* Editorial intro â€" display font, no pill */}
           <div className="about__intro-block">
             <Reveal>
-              <h1 className="about__bio">
+              <h1 className="about__page-title">About</h1>
+            </Reveal>
+            <Reveal delay={80}>
+              <p className="about__bio">
                 I've been early to most things I've gotten into - crypto before it blew up, beta tester for GPT before ChatGPT went public, e-commerce before I could legally sign a lease. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. Now I build websites. Whatever I'm doing next year might be different, but the way I get there won't be - I find things early, learn them fast, and make something real with them.
-              </h1>
+              </p>
             </Reveal>
           </div>
 
@@ -1220,12 +1417,12 @@ function AboutPage() {
   )
 }
 
-/* â”€â”€â”€ Page: Contact â”€â”€â”€ */
+/* â"€â"€â"€ Page: Contact â"€â"€â"€ */
 function ContactPage() {
   return <Contact />
 }
 
-/* â”€â”€â”€ Mobile One-Pager â”€â”€â”€ */
+/* â"€â"€â"€ Mobile One-Pager â"€â"€â"€ */
 function MobileOnePager() {
   return (
     <>
@@ -1236,15 +1433,19 @@ function MobileOnePager() {
   )
 }
 
-/* â”€â”€â”€ Smooth scroll (Lenis) â”€â”€â”€ */
+/* â"€â"€â"€ Smooth scroll (Lenis) â"€â"€â"€ */
 function useLenis() {
   const lenisRef = useRef(null)
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const isMac = navigator.userAgentData
+      ? navigator.userAgentData.platform === 'macOS'
+      : /Mac/.test(navigator.userAgent)
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: prefersReducedMotion ? 0 : 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
+      smoothWheel: prefersReducedMotion ? false : !isMac,
       touchMultiplier: 1.5,
     })
     lenisRef.current = lenis
@@ -1264,7 +1465,7 @@ function useLenis() {
   return lenisRef
 }
 
-/* â”€â”€â”€ Scroll to top on route change â”€â”€â”€ */
+/* â"€â"€â"€ Scroll to top on route change â"€â"€â"€ */
 function ScrollToTop({ lenisRef }) {
   const { pathname } = useLocation()
   useEffect(() => {
@@ -1277,32 +1478,60 @@ function ScrollToTop({ lenisRef }) {
   return null
 }
 
-/* â”€â”€â”€ App â”€â”€â”€ */
-function App() {
+/* â"€â"€â"€ App â"€â"€â"€ */
+function AppInner() {
   const isMobile = useIsMobile()
   const location = useLocation()
   const lenisRef = useLenis()
+  const { theme, toggle: toggleTheme } = useTheme()
+  const [showIntro, setShowIntro] = useState(true)
+  const handleIntroComplete = useCallback(() => setShowIntro(false), [])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('preloader-active', showIntro)
+    document.body.classList.toggle('preloader-active', showIntro)
+
+    return () => {
+      document.documentElement.classList.remove('preloader-active')
+      document.body.classList.remove('preloader-active')
+    }
+  }, [showIntro])
 
   return (
     <>
-      <NoiseOverlay />
-      <Navbar />
-      <ScrollToTop lenisRef={lenisRef} />
-      {isMobile ? (
-        <MobileOnePager />
-      ) : (
-        <PageTransition key={location.pathname}>
-          <Routes location={location}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/work" element={<WorkPage />} />
-            <Route path="/work/:slug" element={<ProjectDetailPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-          </Routes>
-        </PageTransition>
-      )}
-      <Footer />
+      <div className="app-shell" aria-hidden={showIntro ? 'true' : undefined} inert={showIntro ? '' : undefined}>
+        <a href="#main-content" className="skip-link">Skip to content</a>
+        <NoiseOverlay />
+        <Navbar theme={theme} toggleTheme={toggleTheme} />
+        <ScrollToTop lenisRef={lenisRef} />
+        <main id="main-content">
+          {isMobile ? (
+            <MobileOnePager />
+          ) : (
+            <PageTransition key={location.pathname}>
+              <Routes location={location}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/work" element={<WorkPage />} />
+                <Route path="/work/:slug" element={<ProjectDetailPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </PageTransition>
+          )}
+        </main>
+        <Footer />
+      </div>
+      {showIntro ? <IntroPreloader onComplete={handleIntroComplete} /> : null}
     </>
+  )
+}
+
+function App() {
+  return (
+    <MobileProvider>
+      <AppInner />
+    </MobileProvider>
   )
 }
 
