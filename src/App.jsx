@@ -201,8 +201,7 @@ function WavyGrid({ containerRef }) {
     let cols, rows
     const spacing = 28
     const dotRadius = 1.2
-    const influenceRadius = 150
-    const maxDisplacement = 18
+    const influenceRadius = 190
 
     function resize() {
       canvas.width = canvas.offsetWidth * window.devicePixelRatio
@@ -216,11 +215,13 @@ function WavyGrid({ containerRef }) {
     window.addEventListener('resize', resize)
 
     function handleMouse(e) {
+      if (window.innerWidth <= 768) return
+
       const rect = canvas.getBoundingClientRect()
-      mouseRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      }
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+
+      mouseRef.current = { x, y }
     }
 
     function handleMouseLeave() {
@@ -252,8 +253,10 @@ function WavyGrid({ containerRef }) {
       const h = canvas.offsetHeight
       ctx.clearRect(0, 0, w, h)
 
+      const isMobileViewport = window.innerWidth <= 768
       const mx = mouseRef.current.x
       const my = mouseRef.current.y
+      const maxDist = Math.sqrt((w / 2) ** 2 + (h / 2) ** 2)
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -261,35 +264,24 @@ function WavyGrid({ containerRef }) {
           const baseY = r * spacing
 
           const wave = Math.sin(baseX * 0.015 + time) * Math.cos(baseY * 0.015 + time * 0.7) * 3
+          const x = baseX
+          const y = baseY + wave
 
-          let dx = 0
-          let dy = 0
-          let distortScale = 1
+          const distFromCenter = Math.sqrt((baseX - w / 2) ** 2 + (baseY - h / 2) ** 2)
+          const edgeFade = Math.max(0.08, 1 - (distFromCenter / maxDist) * 0.85)
+          let softGradientForce = 0
 
-          const diffX = baseX - mx
-          const diffY = baseY - my
-          const dist = Math.sqrt(diffX * diffX + diffY * diffY)
-
-          if (dist < influenceRadius) {
-            const force = (1 - dist / influenceRadius)
-            const smoothForce = force * force * (3 - 2 * force)
-            const angle = Math.atan2(diffY, diffX)
-            dx = -Math.cos(angle) * smoothForce * maxDisplacement
-            dy = -Math.sin(angle) * smoothForce * maxDisplacement
-            distortScale = 1 - smoothForce * 0.6
+          if (!isMobileViewport && mx >= 0 && my >= 0) {
+            const gradientDistance = Math.sqrt((baseX - mx) ** 2 + (baseY - my) ** 2)
+            const gradientForce = Math.max(0, 1 - gradientDistance / influenceRadius)
+            softGradientForce = gradientForce * gradientForce * (3 - 2 * gradientForce)
           }
 
-          const x = baseX + dx
-          const y = baseY + wave + dy
-
-          const cx = w / 2
-          const cy = h / 2
-          const distFromCenter = Math.sqrt((baseX - cx) ** 2 + (baseY - cy) ** 2)
-          const maxDist = Math.sqrt(cx * cx + cy * cy)
-          const opacity = Math.max(0.08, 1 - (distFromCenter / maxDist) * 0.85)
+          const opacity = Math.min(1, edgeFade * (0.66 + softGradientForce * 0.82))
+          const radius = dotRadius * (1 + softGradientForce * 0.18)
 
           ctx.beginPath()
-          ctx.arc(x, y, Math.max(0.3, dotRadius * distortScale), 0, Math.PI * 2)
+          ctx.arc(x, y, Math.max(0.3, radius), 0, Math.PI * 2)
           ctx.fillStyle = `rgba(${dotRgb}, ${opacity * dotOpacityScale})`
           ctx.fill()
         }
