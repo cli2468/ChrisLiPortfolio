@@ -7,11 +7,13 @@ import greenWitchCafeThumb from './assets/WorksThumbnails/GreenWitchCafe.png'
 import mrMillerThumb from './assets/WorksThumbnails/MrMiller.png'
 import visionThumb from './assets/WorksThumbnails/Vision.png'
 import royalTeaThumb from './assets/WorksThumbnails/RoyalTea.png'
+import ffaThumb from './assets/WorksThumbnails/ffadesktop.png'
 import underPressureMobile from './assets/WorksThumbnails/mobile/UnderPressureMobile.png'
 import greenWitchCafeMobile from './assets/WorksThumbnails/mobile/GWCMobile.png'
 import mrMillerMobile from './assets/WorksThumbnails/mobile/MMDetailingMobile.png'
 import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.png'
 import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.png'
+import ffaMobile from './assets/WorksThumbnails/mobile/ffamobile.png'
 import './App.css'
 
 /* â"€â"€â"€ Intersection Observer hook for scroll reveals â"€â"€â"€ */
@@ -752,6 +754,18 @@ const projects = [
     thumbnailPosition: '50% 50%',
     detailPosition: '50% 50%',
     url: 'https://royalteaone.com/',
+  },
+  {
+    slug: 'gary-one-love-ffa',
+    title: 'GARY ONE LOVE FIREFIGHTER ASSOCIATION',
+    category: 'Client / Website',
+    year: '2026',
+    desc: 'A website for a nonprofit firefighter association in Gary, Indiana, honoring their history and supporting the next generation through community events.',
+    thumbnail: ffaThumb,
+    mobileThumbnail: ffaMobile,
+    thumbnailPosition: '50% 50%',
+    detailPosition: '50% 50%',
+    url: 'https://www.garyoneloveffa.com/',
   },
 ]
 
