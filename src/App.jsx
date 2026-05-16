@@ -2,6 +2,7 @@
 import { createPortal } from 'react-dom'
 import { Routes, Route, Link, useLocation, useParams } from 'react-router-dom'
 import Lenis from 'lenis'
+import { animate, createScope, createTimeline, stagger, text } from 'animejs'
 import underPressureThumb from './assets/WorksThumbnails/UnderPressure.png'
 import greenWitchCafeThumb from './assets/WorksThumbnails/GreenWitchCafe.png'
 import mrMillerThumb from './assets/WorksThumbnails/MrMiller.png'
@@ -14,6 +15,9 @@ import mrMillerMobile from './assets/WorksThumbnails/mobile/MMDetailingMobile.pn
 import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.png'
 import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.png'
 import ffaMobile from './assets/WorksThumbnails/mobile/ffamobile.png'
+import VerticalCutReveal from './components/VerticalCutReveal'
+import CSSBox from './components/CSSBox'
+import ImageTrail from './components/ImageTrail'
 import './App.css'
 
 /* â"€â"€â"€ Intersection Observer hook for scroll reveals â"€â"€â"€ */
@@ -205,15 +209,31 @@ function WavyGrid({ containerRef }) {
     const dotRadius = 1.2
     const influenceRadius = 190
 
-    function resize() {
+    let lastW = 0
+    let lastH = 0
+
+    function applyResize() {
       canvas.width = canvas.offsetWidth * window.devicePixelRatio
       canvas.height = canvas.offsetHeight * window.devicePixelRatio
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
       cols = Math.ceil(canvas.offsetWidth / spacing) + 1
       rows = Math.ceil(canvas.offsetHeight / spacing) + 1
+      lastW = canvas.offsetWidth
+      lastH = canvas.offsetHeight
     }
 
-    resize()
+    function resize() {
+      const w = canvas.offsetWidth
+      const h = canvas.offsetHeight
+      // Ignore the small height jitter mobile browsers produce when the URL
+      // bar shows/hides during scroll — it fires `resize` but isn't a real
+      // layout change. Only rebuild on width change or a substantial (>120px)
+      // height change (orientation flip, real resize).
+      if (w === lastW && Math.abs(h - lastH) < 120) return
+      applyResize()
+    }
+
+    applyResize()
     window.addEventListener('resize', resize)
 
     function handleMouse(e) {
@@ -531,36 +551,138 @@ function AsciiDonut() {
   )
 }
 
-function Hero() {
-  const heroRef = useRef(null)
-  const typedRole = useTypingLoop([' web designer.', ' developer.', ' early adopter.', ' builder.', ' creative.'], 80, 40, 1800)
-
+function HeroCube({ size = 200, autoSpin = true, draggable = true, initialRotateX = -15, initialRotateY = 25, onDragChange, faceFontSize = 'clamp(1.4rem, 1.8vw, 2.1rem)' }) {
+  const faceBase = {
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    height: '100%',
+    padding: '12px',
+    color: 'var(--accent-primary)',
+    fontFamily: 'var(--font-display)',
+    fontWeight: 700,
+    letterSpacing: '0.05em',
+    fontSize: faceFontSize,
+    lineHeight: 1.05,
+    userSelect: 'none',
+    background: 'var(--bg-base, transparent)',
+  }
+  const Face = ({ lines, align = 'end', justify = 'end', textAlign = 'right' }) => (
+    <div style={{ ...faceBase, alignItems: align, justifyContent: justify, textAlign }}>
+      {lines.map((line, i) => <div key={i}>{line}</div>)}
+    </div>
+  )
   return (
-    <section className="hero" ref={heroRef}>
-      <WavyGrid containerRef={heroRef} />
-      <div className="hero__inner">
-        <div className="hero__left">
-          <Reveal>
-            <h1 className="hero__headline">
-              I'm Chris Li
-            </h1>
-          </Reveal>
-          <Reveal delay={100}>
-            <p className="hero__typing-line">
-              I'm a<span className="hero__typed">{typedRole}</span><span className="hero__cursor" aria-hidden="true">|</span>
-            </p>
-          </Reveal>
-          <Reveal delay={180}>
-            <p className="hero__bio">
-              I build websites for businesses that deserve to look as good online as they are in person.
-            </p>
-          </Reveal>
-        </div>
-        <div className="hero__right">
-          <div className="hero__interactive-space">
-            <AsciiDonut />
+    <CSSBox
+      width={size}
+      height={size}
+      depth={size}
+      perspective={600}
+      stiffness={100}
+      damping={30}
+      autoSpin={autoSpin}
+      draggable={draggable}
+      initialRotateX={initialRotateX}
+      initialRotateY={initialRotateY}
+      onDragChange={onDragChange}
+      faces={{
+        front:  <Face lines={['YOU CAN', 'JUST', 'DO THINGS']} align="flex-end" justify="flex-end" textAlign="right" />,
+        back:   <Face lines={['MAKE THINGS', 'YOU WISH', 'EXISTED']} align="flex-start" justify="flex-end" textAlign="left" />,
+        right:  <Face lines={['MAKE THINGS', 'YOU WISH', 'EXISTED']} align="flex-start" justify="flex-end" textAlign="left" />,
+        left:   <Face lines={['BREAK', 'THINGS', 'MOVE', 'FAST']} align="flex-end" justify="flex-start" textAlign="left" />,
+        top:    <Face lines={['YOU CAN', 'JUST', 'DO THINGS']} align="flex-end" justify="flex-end" textAlign="right" />,
+        bottom: <Face lines={['BREAK', 'THINGS', 'MOVE', 'FAST']} align="flex-end" justify="flex-start" textAlign="left" />,
+      }}
+    />
+  )
+}
+
+function PosterTitle3D({ playReveal }) {
+  const springTransition = { type: 'spring', stiffness: 140, damping: 22 }
+  return (
+    <article className="hero__bottom-title">
+      <h2 aria-label="Creative plus Web designer">
+        <span className="hero__title-line">
+          <VerticalCutReveal
+            splitBy="characters"
+            staggerDuration={0.06}
+            staggerFrom="first"
+            autoStart={false}
+            start={playReveal}
+            transition={springTransition}
+          >
+            Creative
+          </VerticalCutReveal>
+        </span>
+        <span className="hero__title-line hero__title-line--wide">
+          <VerticalCutReveal
+            splitBy="characters"
+            staggerDuration={0.06}
+            staggerFrom="first"
+            reverse
+            autoStart={false}
+            start={playReveal}
+            transition={{ ...springTransition, delay: 0.55 }}
+          >
+            Web designer
+          </VerticalCutReveal>
+        </span>
+      </h2>
+      <span className="hero__bottom-plus" aria-hidden="true">
+        <VerticalCutReveal
+          splitBy="characters"
+          staggerDuration={0}
+          staggerFrom="first"
+          autoStart={false}
+          start={playReveal}
+          transition={springTransition}
+        >
+          +
+        </VerticalCutReveal>
+      </span>
+    </article>
+  )
+}
+
+function Hero({ playReveal = true }) {
+  const heroRef = useRef(null)
+  const cubeZoneRef = useRef(null)
+  const [cubeDragging, setCubeDragging] = useState(false)
+  const isMobile = useIsMobile()
+
+  if (!isMobile) {
+    return (
+      <section id="hero" className="hero hero--poster" ref={heroRef}>
+        <WavyGrid containerRef={heroRef} />
+        <ImageTrail
+          images={visibleProjects.slice(0, 5).map((p) => p.thumbnail)}
+          threshold={210}
+          imageSize={360}
+          trailLength={20}
+          fadeDuration={0.6}
+          lifespan={700}
+          className="hero__image-trail"
+          scope={heroRef}
+          paused={cubeDragging}
+          deadZone={cubeZoneRef}
+        />
+        <div className="hero__inner hero__inner--poster">
+          <div className="hero__poster-cube" ref={cubeZoneRef}>
+            <HeroCube size={180} autoSpin={false} initialRotateX={-30} initialRotateY={30} onDragChange={setCubeDragging} />
+          </div>
+          <div className="hero__bottom-title-reveal">
+            <PosterTitle3D playReveal={playReveal} />
           </div>
         </div>
+      </section>
+    )
+  }
+
+  return (
+    <section id="hero" className="hero hero--mobile-cube" ref={heroRef}>
+      <WavyGrid containerRef={heroRef} />
+      <div className="hero__mobile-cube">
+        <HeroCube size={180} autoSpin={false} draggable initialRotateX={-30} initialRotateY={30} faceFontSize="clamp(1.9rem, 5.5vw, 2.7rem)" />
       </div>
     </section>
   )
@@ -651,21 +773,125 @@ function IntroPreloader({ onComplete }) {
 }
 
 /* â"€â"€â"€ Navbar â"€â"€â"€ */
+function Nav3DLink({ to, label, isActive }) {
+  const rootRef = useRef(null)
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const scope = createScope({ root, defaults: { ease: 'outQuad' } }).add((scope) => {
+      const { methods } = scope
+
+      text.split('.nav-3d', {
+        chars: `<span class="word-3d char-{i}">
+          <em class="face face-top">{value}</em>
+          <em class="face-front">{value}</em>
+          <em class="face face-bottom">{value}</em>
+          <em class="face face-back">{value}</em>
+        </span>`,
+      })
+
+      const charStagger = stagger(25, { use: 'data-char', start: 0 })
+
+      const rotateAnim = createTimeline({
+        autoplay: false,
+        defaults: { ease: 'inOut(2)', duration: 400 },
+      })
+        .add('.word-3d', { rotateX: -180 }, charStagger)
+        .add('.word-3d .face-top', { opacity: [0, 0, 0] }, charStagger)
+        .add('.word-3d .face-front', { opacity: [1, 0, 0] }, charStagger)
+        .add('.word-3d .face-bottom', { opacity: [0, 1, 0] }, charStagger)
+        .add('.word-3d .face-back', { opacity: [0, 0, 1] }, charStagger)
+
+      scope.add('onEnter', () => animate(rotateAnim, { progress: 1 }))
+      scope.add('onLeave', () => animate(rotateAnim, { progress: 0 }))
+
+      root.addEventListener('pointerenter', methods.onEnter)
+      root.addEventListener('pointerleave', methods.onLeave)
+    })
+
+    return () => scope.revert()
+  }, [label])
+
+  return (
+    <Link
+      to={to}
+      ref={rootRef}
+      className={isActive ? 'active' : ''}
+    >
+      <span className="nav-3d">{label}</span>
+    </Link>
+  )
+}
+
+function NavTypingLoop() {
+  const word = useTypingLoop(['design', 'frontend', 'architecture', 'craft', 'systems', 'detail'], 90, 50, 1600)
+  return (
+    <span className="nav-logo__typed" aria-hidden="true">
+      {word}
+      <span className="nav-logo__typed-cursor">|</span>
+    </span>
+  )
+}
+
 function Navbar({ theme, toggleTheme }) {
   const location = useLocation()
   const isMobile = useIsMobile()
 
+  useEffect(() => {
+    if (isMobile) return
+
+    const scope = createScope({
+      root: '#horizontal-split',
+      defaults: {
+        ease: 'outQuad',
+        duration: 500,
+      },
+    }).add((scope) => {
+      const { root, methods } = scope
+
+      text.split('h2', {
+        chars: {
+          class: 'char',
+          clone: 'left',
+          wrap: 'clip',
+        },
+      })
+
+      const rotateAnim = createTimeline({
+        autoplay: false,
+        defaults: { ease: 'inOutQuad', duration: 400 },
+      })
+        .add('.char > span', { x: '100%' }, stagger(5, { use: 'data-char' }))
+
+      scope.add('onEnter', () => animate(rotateAnim, { progress: 1 }))
+      scope.add('onLeave', () => animate(rotateAnim, { progress: 0 }))
+
+      root.addEventListener('pointerenter', methods.onEnter)
+      root.addEventListener('pointerleave', methods.onLeave)
+
+      return () => {
+        root.removeEventListener('pointerenter', methods.onEnter)
+        root.removeEventListener('pointerleave', methods.onLeave)
+      }
+    })
+
+    return () => scope.revert()
+  }, [isMobile])
+
   if (isMobile) {
     return (
-      <nav className="nav-pill">
+      <nav className="nav-pill nav-pill--mobile">
         <div className="nav-pill__inner">
-          <a href="#hero" className="nav-logo">C.</a>
+          <article className="nav-logo nav-logo--name">
+            <a href="#hero">
+              <NavTypingLoop />
+              <h2>by christopher li</h2>
+            </a>
+          </article>
           <div className="nav-links">
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
-            <a href="#contact" className="nav-cta">
-              <span>Let's Talk</span>
-              <span className="nav-cta__arrow">&rarr;</span>
-            </a>
           </div>
         </div>
       </nav>
@@ -673,17 +899,19 @@ function Navbar({ theme, toggleTheme }) {
   }
 
   return (
-    <nav className="nav-pill">
+    <nav className="nav-pill nav-pill--desktop">
       <div className="nav-pill__inner">
-        <Link to="/" className="nav-logo">C.</Link>
-        <div className="nav-links">
-          <Link to="/work" className={location.pathname === '/work' ? 'active' : ''}>Work</Link>
-          <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>About</Link>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <Link to="/contact" className="nav-cta">
-            <span>Let's Talk</span>
-            <span className="nav-cta__arrow">&rarr;</span>
+        <article id="horizontal-split" className="nav-logo nav-logo--name">
+          <Link to="/">
+            <NavTypingLoop />
+            <h2>by christopher li</h2>
           </Link>
+        </article>
+        <div className="nav-links">
+          <Nav3DLink to="/work" label="Work" isActive={location.pathname === '/work'} />
+          <Nav3DLink to="/about" label="About" isActive={location.pathname === '/about'} />
+          <Nav3DLink to="/contact" label="Contact" isActive={location.pathname === '/contact'} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
       </div>
     </nav>
@@ -695,11 +923,35 @@ const SHOW_GREEN_WITCH_CAFE = false
 
 const projects = [
   {
+    slug: 'mr-millers-detailing',
+    title: "MR. MILLER'S MOBILE DETAILING",
+    category: 'Client / Website',
+    year: '2026',
+    desc: "Monthly revenue tripled after the launch of the website, with 15-20 new leads in the first couple months. A sleek website for a mobile auto detailing service with contact forms, built to drive bookings and showcase their work.",
+    thumbnail: mrMillerThumb,
+    mobileThumbnail: mrMillerMobile,
+    thumbnailPosition: '60% 50%',
+    detailPosition: '60% 50%',
+    url: 'https://mrmillersmobiledetailing.com/',
+  },
+  {
+    slug: 'royal-tea',
+    title: 'ROYAL TEA',
+    category: 'Client / Website',
+    year: '2025',
+    desc: 'After building them a brand-new website, they now rank #1 in SEO for "boba shop." A clean, modern site for a family-run tea brand that turns local searches into walk-in customers.',
+    thumbnail: royalTeaThumb,
+    mobileThumbnail: royalTeaMobile,
+    thumbnailPosition: '50% 50%',
+    detailPosition: '50% 50%',
+    url: 'https://royalteaone.com/',
+  },
+  {
     slug: 'under-pressure',
     title: 'UNDER PRESSURE EXTERIOR WASHING',
     category: 'Client / Website',
     year: '2026',
-    desc: 'A clean, conversion-focused website for a pressure washing business with booking integration and service breakdowns.',
+    desc: 'A conversion-focused site for a pressure washing business that already pulls in steady inbound leads, with clear service breakdowns and contact forms that make booking effortless.',
     thumbnail: underPressureThumb,
     mobileThumbnail: underPressureMobile,
     thumbnailPosition: '52% 50%',
@@ -720,52 +972,28 @@ const projects = [
     isVisible: SHOW_GREEN_WITCH_CAFE,
   },
   {
-    slug: 'mr-millers-detailing',
-    title: "MR. MILLER'S MOBILE DETAILING",
+    slug: 'gary-one-love-ffa',
+    title: 'GARY ONE LOVE FIREFIGHTER ASSOCIATION',
     category: 'Client / Website',
     year: '2026',
-    desc: 'A sleek website for a mobile auto detailing service, designed to drive bookings and showcase their work.',
-    thumbnail: mrMillerThumb,
-    mobileThumbnail: mrMillerMobile,
-    thumbnailPosition: '60% 50%',
-    detailPosition: '60% 50%',
-    url: 'https://mrmillersmobiledetailing.com/',
+    desc: 'A polished home for a Gary, Indiana firefighter nonprofit that honors their history, drives event turnout, and makes it easy for the community to get involved.',
+    thumbnail: ffaThumb,
+    mobileThumbnail: ffaMobile,
+    thumbnailPosition: '50% 50%',
+    detailPosition: '50% 50%',
+    url: 'https://www.garyoneloveffa.com/',
   },
   {
     slug: 'vision',
     title: 'VISION',
     category: 'Personal Project / Full Stack',
     year: '2025',
-    desc: 'An order parsing and financial database management tool built to streamline my e-commerce reselling operations.',
+    desc: 'A full-stack order-parsing and financial dashboard I built to run my own e-commerce operation, turning thousands of messy orders into clean, trackable numbers.',
     thumbnail: visionThumb,
     mobileThumbnail: visionMobile,
     thumbnailPosition: '50% 50%',
     detailPosition: '50% 50%',
     url: 'https://cli2468.github.io/Vision/',
-  },
-  {
-    slug: 'royal-tea',
-    title: 'ROYAL TEA',
-    category: 'Personal Project / Website',
-    year: '2025',
-    desc: 'A website built for family, bringing their tea brand to life with a modern, elegant digital presence.',
-    thumbnail: royalTeaThumb,
-    mobileThumbnail: royalTeaMobile,
-    thumbnailPosition: '50% 50%',
-    detailPosition: '50% 50%',
-    url: 'https://royalteaone.com/',
-  },
-  {
-    slug: 'gary-one-love-ffa',
-    title: 'GARY ONE LOVE FIREFIGHTER ASSOCIATION',
-    category: 'Client / Website',
-    year: '2026',
-    desc: 'A website for a nonprofit firefighter association in Gary, Indiana, honoring their history and supporting the next generation through community events.',
-    thumbnail: ffaThumb,
-    mobileThumbnail: ffaMobile,
-    thumbnailPosition: '50% 50%',
-    detailPosition: '50% 50%',
-    url: 'https://www.garyoneloveffa.com/',
   },
 ]
 
@@ -1010,6 +1238,7 @@ function MobileWorkCarousel() {
           <div
             ref={trackRef}
             className="work-carousel__track"
+            data-lenis-prevent
             role="region"
             aria-label="Project carousel"
             aria-roledescription="carousel"
@@ -1225,10 +1454,10 @@ function NotFoundPage() {
 }
 
 /* â"€â"€â"€ Page: Home â"€â"€â"€ */
-function HomePage() {
+function HomePage({ playReveal = true }) {
   return (
     <>
-      <Hero />
+      <Hero playReveal={playReveal} />
     </>
   )
 }
@@ -1518,7 +1747,7 @@ function AppInner() {
           ) : (
             <PageTransition key={location.pathname}>
               <Routes location={location}>
-                <Route path="/" element={<HomePage />} />
+                <Route path="/" element={<HomePage playReveal={!showIntro} />} />
                 <Route path="/work" element={<WorkPage />} />
                 <Route path="/work/:slug" element={<ProjectDetailPage />} />
                 <Route path="/about" element={<AboutPage />} />
