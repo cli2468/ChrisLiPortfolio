@@ -551,7 +551,7 @@ function AsciiDonut() {
   )
 }
 
-function HeroCube({ size = 200, autoSpin = true, draggable = true, initialRotateX = -15, initialRotateY = 25, onDragChange, faceFontSize = 'clamp(1.4rem, 1.8vw, 2.1rem)' }) {
+function HeroCube({ size = 200, autoSpin = true, draggable = true, initialRotateX = -15, initialRotateY = 25, onDragChange, faceFontSize = 'clamp(1.4rem, 1.8vw, 2.1rem)', hintOnMount = false, hintDelay = 900 }) {
   const faceBase = {
     display: 'flex',
     flexDirection: 'column',
@@ -585,6 +585,8 @@ function HeroCube({ size = 200, autoSpin = true, draggable = true, initialRotate
       initialRotateX={initialRotateX}
       initialRotateY={initialRotateY}
       onDragChange={onDragChange}
+      hintOnMount={hintOnMount}
+      hintDelay={hintDelay}
       faces={{
         front:  <Face lines={['YOU CAN', 'JUST', 'DO THINGS']} align="flex-end" justify="flex-end" textAlign="right" />,
         back:   <Face lines={['MAKE THINGS', 'YOU WISH', 'EXISTED']} align="flex-start" justify="flex-end" textAlign="left" />,
@@ -668,7 +670,7 @@ function Hero({ playReveal = true }) {
         />
         <div className="hero__inner hero__inner--poster">
           <div className="hero__poster-cube" ref={cubeZoneRef}>
-            <HeroCube size={180} autoSpin={false} initialRotateX={-30} initialRotateY={30} onDragChange={setCubeDragging} />
+            <HeroCube size={180} autoSpin={false} initialRotateX={-30} initialRotateY={30} onDragChange={setCubeDragging} hintOnMount={playReveal} hintDelay={900} />
           </div>
           <div className="hero__bottom-title-reveal">
             <PosterTitle3D playReveal={playReveal} />
@@ -682,7 +684,7 @@ function Hero({ playReveal = true }) {
     <section id="hero" className="hero hero--mobile-cube" ref={heroRef}>
       <WavyGrid containerRef={heroRef} />
       <div className="hero__mobile-cube">
-        <HeroCube size={180} autoSpin={false} draggable initialRotateX={-30} initialRotateY={30} faceFontSize="clamp(1.9rem, 5.5vw, 2.7rem)" />
+        <HeroCube size={180} autoSpin={false} draggable initialRotateX={-30} initialRotateY={30} faceFontSize="clamp(1.9rem, 5.5vw, 2.7rem)" hintOnMount={playReveal} hintDelay={250} />
       </div>
     </section>
   )
@@ -1660,10 +1662,10 @@ function ContactPage() {
 }
 
 /* â"€â"€â"€ Mobile One-Pager â"€â"€â"€ */
-function MobileOnePager() {
+function MobileOnePager({ playReveal = true }) {
   return (
     <>
-      <Hero />
+      <Hero playReveal={playReveal} />
       <WorkStickyScroll />
       <Contact />
     </>
@@ -1743,7 +1745,7 @@ function AppInner() {
         <ScrollToTop lenisRef={lenisRef} />
         <main id="main-content">
           {isMobile ? (
-            <MobileOnePager />
+            <MobileOnePager playReveal={!showIntro} />
           ) : (
             <PageTransition key={location.pathname}>
               <Routes location={location}>

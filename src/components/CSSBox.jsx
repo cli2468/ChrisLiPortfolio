@@ -17,6 +17,8 @@ const CSSBox = forwardRef(function CSSBox(
     initialRotateX = -15,
     initialRotateY = 25,
     onDragChange,
+    hintOnMount = false,
+    hintDelay = 900,
   },
   ref,
 ) {
@@ -69,6 +71,48 @@ const CSSBox = forwardRef(function CSSBox(
       controls.stop()
     }
   }, [autoSpin, rotateY])
+
+  // One-time "you can drag me" hint: after a short delay, sweep the cube
+  // through a small rotation and back. Cancels instantly if the user grabs
+  // it, so the hint never fights real interaction.
+  useEffect(() => {
+    if (!hintOnMount) return
+    let ctrlX, ctrlY
+    let stopped = false
+
+    const baseX = rotateX.get()
+    const baseY = rotateY.get()
+
+    const timer = window.setTimeout(() => {
+      if (stateRef.current.dragging) return
+      // Simulate a single drag gesture: smooth, continuous motion up and to
+      // the right, decelerating to a stop and holding there — like someone
+      // grabbed it, dragged, and let go. No return, no overshoot, no twitch.
+      // Drag right => rotateY +, drag up => rotateX + (matches drag handler).
+      // Real drag-to-flick: slow grab, accelerate into the throw, then a
+      // short momentum overshoot that decays back. Keyframes give the
+      // accelerate→overshoot→settle shape; per-segment eases shape the feel.
+      ctrlY = animate(rotateY, [baseY, baseY + 95, baseY + 108, baseY + 102], {
+        duration: 1.15,
+        times: [0, 0.62, 0.82, 1],
+        ease: ['easeIn', 'easeOut', 'easeOut'],
+        onUpdate: () => { if (stopped || stateRef.current.dragging) ctrlY?.stop() },
+      })
+      ctrlX = animate(rotateX, [baseX, baseX + 58, baseX + 66, baseX + 62], {
+        duration: 1.15,
+        times: [0, 0.62, 0.82, 1],
+        ease: ['easeIn', 'easeOut', 'easeOut'],
+        onUpdate: () => { if (stopped || stateRef.current.dragging) ctrlX?.stop() },
+      })
+    }, hintDelay)
+
+    return () => {
+      stopped = true
+      window.clearTimeout(timer)
+      ctrlX?.stop()
+      ctrlY?.stop()
+    }
+  }, [hintOnMount, hintDelay, rotateX, rotateY])
 
   // Non-passive touchmove guard: React's synthetic listeners are passive, so
   // preventDefault() there is ignored. While dragging, block native touch
