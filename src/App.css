@@ -322,13 +322,25 @@ a { color: inherit; text-decoration: none; }
   font-weight: 300;
 }
 
+/* Drawn signature shown in place of the typed name */
+.intro-preloader__signature {
+  display: block;
+  width: clamp(260px, 46vw, 560px);
+  height: auto;
+  color: var(--text-strong);
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px oklch(0% 0 0 / 0.25));
+}
+
 .intro-preloader--exit {
   transform: translateY(-100%);
 }
 
+/* Keep the signature fully visible while the screen wipes up — it rides up with
+   the preloader rather than fading out. */
 .intro-preloader--exit .intro-preloader__inner {
-  opacity: 0;
-  transform: translateY(-12px);
+  opacity: 1;
+  transform: none;
 }
 
 /* ─── PAGE TRANSITIONS ─── */
@@ -763,10 +775,10 @@ a { color: inherit; text-decoration: none; }
   overflow: visible;
 }
 
-/* Mobile hero — only a centered, static cube */
+/* Mobile hero — cube raised high (independent), "Creative + Web designer" title near bottom */
 .hero--mobile-cube {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: block;
   min-height: 100svh;
   height: 100svh;
   padding: 0;
@@ -774,25 +786,44 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
+/* Cube: positioned high and horizontally centered. Independent of the title. */
 .hero__mobile-cube {
-  position: relative;
-  z-index: 2;
-  grid-area: 1 / 1;
-  display: grid;
-  place-items: center;
-  place-self: center;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: clamp(140px, 28vh, 280px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
 }
 
-/* The CSSBox itself is exactly cube-sized; center it precisely and
-   neutralise any inherited text-align / inline-flex offset. */
 .hero__mobile-cube .css-box {
   margin: 0 auto;
 }
 
+/* Title: anchored near the bottom, left-aligned to the site's content gutter (20px),
+   independent of the cube. Reuses the desktop poster-title layout. */
+.hero__mobile-title {
+  position: absolute;
+  left: 20px;            /* matches the mobile content gutter used by sections below */
+  right: 20px;
+  bottom: clamp(12px, 2.5vh, 28px);
+  z-index: 2;
+}
+
+/* Keep desktop left-alignment; only resize so "Web designer" never overflows. */
+.hero__mobile-title .hero__bottom-title h2 {
+  font-size: clamp(2.6rem, 12vw, 4.4rem);
+  /* More breathing room between "Creative" and "Web designer" */
+  gap: clamp(10px, 3vw, 22px);
+}
+
+.hero__mobile-title .hero__bottom-plus {
+  right: 0;
+}
+
 .hero--mobile-cube .wavy-grid {
-  grid-area: 1 / 1;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
 
 .wavy-grid {

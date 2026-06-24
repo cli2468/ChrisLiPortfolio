@@ -3,22 +3,45 @@ import { createPortal } from 'react-dom'
 import { Routes, Route, Link, useLocation, useParams } from 'react-router-dom'
 import Lenis from 'lenis'
 import { animate, createScope, createTimeline, stagger, text } from 'animejs'
-import underPressureThumb from './assets/WorksThumbnails/UnderPressure.png'
-import greenWitchCafeThumb from './assets/WorksThumbnails/GreenWitchCafe.png'
-import mrMillerThumb from './assets/WorksThumbnails/MrMiller.png'
-import visionThumb from './assets/WorksThumbnails/Vision.png'
-import royalTeaThumb from './assets/WorksThumbnails/RoyalTea.png'
-import ffaThumb from './assets/WorksThumbnails/ffadesktop.png'
-import underPressureMobile from './assets/WorksThumbnails/mobile/UnderPressureMobile.png'
-import greenWitchCafeMobile from './assets/WorksThumbnails/mobile/GWCMobile.png'
-import mrMillerMobile from './assets/WorksThumbnails/mobile/MMDetailingMobile.png'
-import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.png'
-import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.png'
-import ffaMobile from './assets/WorksThumbnails/mobile/ffamobile.png'
+import underPressureThumb from './assets/WorksThumbnails/UnderPressure.webp'
+import greenWitchCafeThumb from './assets/WorksThumbnails/GreenWitchCafe.webp'
+import mrMillerThumb from './assets/WorksThumbnails/MrMiller.webp'
+import visionThumb from './assets/WorksThumbnails/Vision.webp'
+import royalTeaThumb from './assets/WorksThumbnails/RoyalTea.webp'
+import ffaThumb from './assets/WorksThumbnails/ffadesktop.webp'
+import hillerLewisThumb from './assets/WorksThumbnails/HillerLewis.webp'
+import underPressureMobile from './assets/WorksThumbnails/mobile/UnderPressureMobile.webp'
+import greenWitchCafeMobile from './assets/WorksThumbnails/mobile/GWCMobile.webp'
+import mrMillerMobile from './assets/WorksThumbnails/mobile/MMDetailingMobile.webp'
+import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.webp'
+import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.webp'
+import ffaMobile from './assets/WorksThumbnails/mobile/ffamobile.webp'
+import hillerLewisMobile from './assets/WorksThumbnails/mobile/HillerLewisMobile.webp'
+
+/* â”€â”€â”€ Cursor-trail images, grouped by color profile â”€â”€â”€ */
+// Warm (peach / orange / red) â€" Royal Tea
+import trailWarmRoyalPoke from './assets/CursorTrail/Screenshot 2026-06-23 235010.webp'
+import trailWarmRoyalCollection from './assets/CursorTrail/Screenshot 2026-06-23 235023.webp'
+// Cool / dark (navy / slate / blue) â€" Under Pressure
+import trailCoolUP1 from './assets/CursorTrail/Screenshot 2026-06-23 235130.webp'
+import trailCoolUP2 from './assets/CursorTrail/Screenshot 2026-06-23 235155.webp'
+import trailCoolUP3 from './assets/CursorTrail/Screenshot 2026-06-23 235222.webp'
+// Note: Hiller-Lewis is already represented in the trail via its project thumbnail
+// (trailCurrent), so its CursorTrail screenshots are intentionally not added here
+// to avoid two near-identical Hiller-Lewis frames appearing back-to-back.
+// Mixed (red / white) â€" Gary One Love
+import trailMixedFFA from './assets/CursorTrail/Screenshot 2026-06-23 235234.webp'
+
 import VerticalCutReveal from './components/VerticalCutReveal'
 import CSSBox from './components/CSSBox'
 import ImageTrail from './components/ImageTrail'
+import { Signature, SIGNATURE_TOTAL_MS } from './components/Signature'
 import './App.css'
+
+/* â”€â”€â”€ Cursor-trail color-profile groups (kept separate so each can be used on its own) â”€â”€â”€ */
+const trailWarm = [trailWarmRoyalPoke, trailWarmRoyalCollection]   // peach / orange / red
+const trailCool = [trailCoolUP1, trailCoolUP2, trailCoolUP3]       // navy / slate / blue
+const trailMixed = [trailMixedFFA]                                 // red / white
 
 /* â"€â"€â"€ Intersection Observer hook for scroll reveals â"€â"€â"€ */
 function useReveal() {
@@ -657,7 +680,7 @@ function Hero({ playReveal = true }) {
       <section id="hero" className="hero hero--poster" ref={heroRef}>
         <WavyGrid containerRef={heroRef} />
         <ImageTrail
-          images={visibleProjects.slice(0, 5).map((p) => p.thumbnail)}
+          images={trailAll}
           threshold={210}
           imageSize={360}
           trailLength={20}
@@ -686,70 +709,35 @@ function Hero({ playReveal = true }) {
       <div className="hero__mobile-cube">
         <HeroCube size={180} autoSpin={false} draggable initialRotateX={-30} initialRotateY={30} faceFontSize="clamp(1.9rem, 5.5vw, 2.7rem)" hintOnMount={playReveal} hintDelay={250} />
       </div>
+      <div className="hero__mobile-title">
+        <PosterTitle3D playReveal={playReveal} />
+      </div>
     </section>
   )
 }
 
 function IntroPreloader({ onComplete }) {
-  const [display, setDisplay] = useState('')
-  const [charIndex, setCharIndex] = useState(0)
-  const [phase, setPhase] = useState('typing')
   const [isExiting, setIsExiting] = useState(false)
   const [prefersReducedMotion] = useState(() => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
   })
 
+  // Reduced motion: skip the draw, just flash the (static) signature and exit.
   useEffect(() => {
     if (prefersReducedMotion) {
-      const revealTimer = setTimeout(() => setDisplay(INTRO_NAME), 80)
-      const exitTimer = setTimeout(() => setIsExiting(true), 240)
-      const completeTimer = setTimeout(onComplete, 360)
-
+      const exitTimer = setTimeout(() => setIsExiting(true), 320)
+      const completeTimer = setTimeout(onComplete, 440)
       return () => {
-        clearTimeout(revealTimer)
         clearTimeout(exitTimer)
         clearTimeout(completeTimer)
       }
     }
 
-    if (phase === 'typing') {
-      if (charIndex < INTRO_NAME.length) {
-        const next = charIndex + 1
-        const t = setTimeout(() => {
-          setDisplay(INTRO_NAME.slice(0, next))
-          setCharIndex(next)
-        }, charIndex === 0 ? 185 : 60)
-        return () => clearTimeout(t)
-      }
-
-      setPhase('pausing')
-      return
-    }
-
-    if (phase === 'pausing') {
-      const t = setTimeout(() => setPhase('deleting'), 650)
-      return () => clearTimeout(t)
-    }
-
-    if (phase === 'deleting') {
-      if (charIndex > 0) {
-        const next = charIndex - 1
-        const t = setTimeout(() => {
-          setDisplay(INTRO_NAME.slice(0, next))
-          setCharIndex(next)
-        }, 35)
-        return () => clearTimeout(t)
-      }
-
-      setPhase('exiting')
-      return
-    }
-
-    if (phase === 'exiting') {
-      const t = setTimeout(() => setIsExiting(true), 160)
-      return () => clearTimeout(t)
-    }
-  }, [charIndex, onComplete, phase, prefersReducedMotion])
+    // Draw the signature, hold briefly, then begin the exit slide.
+    const HOLD_AFTER_DRAW_MS = 340
+    const exitTimer = setTimeout(() => setIsExiting(true), SIGNATURE_TOTAL_MS + HOLD_AFTER_DRAW_MS)
+    return () => clearTimeout(exitTimer)
+  }, [onComplete, prefersReducedMotion])
 
   useEffect(() => {
     if (!isExiting || prefersReducedMotion) return
@@ -760,15 +748,9 @@ function IntroPreloader({ onComplete }) {
 
   return (
     <div className={`intro-preloader${isExiting ? ' intro-preloader--exit' : ''}`} role="status" aria-live="polite">
-      <span className="sr-only">Loading Chris Li portfolio.</span>
+      <span className="sr-only">Loading {INTRO_NAME} portfolio.</span>
       <div className="intro-preloader__inner" aria-hidden="true">
-        <div className="intro-preloader__line">
-          <span className="intro-preloader__measure">{INTRO_NAME}|</span>
-          <span className="intro-preloader__content">
-            <span className="intro-preloader__typed">{display}</span>
-            <span className="intro-preloader__cursor">|</span>
-          </span>
-        </div>
+        <Signature className="intro-preloader__signature" start={!prefersReducedMotion} static={prefersReducedMotion} />
       </div>
     </div>
   )
@@ -938,7 +920,7 @@ const projects = [
   },
   {
     slug: 'royal-tea',
-    title: 'ROYAL TEA',
+    title: 'ROYAL TEA BOBA AND POKE',
     category: 'Client / Website',
     year: '2025',
     desc: 'After building them a brand-new website, they now rank #1 in SEO for "boba shop." A clean, modern site for a family-run tea brand that turns local searches into walk-in customers.',
@@ -947,6 +929,19 @@ const projects = [
     thumbnailPosition: '50% 50%',
     detailPosition: '50% 50%',
     url: 'https://royalteaone.com/',
+  },
+  {
+    slug: 'hiller-lewis',
+    title: 'THE HILLER-LEWIS GROUP',
+    category: 'Client / Website',
+    year: '2026',
+    desc: 'A personal brand site for an author and speaker duo, bringing their books, podcast, YouTube videos, and shop together in one polished home that turns followers into readers and customers.',
+    thumbnail: hillerLewisThumb,
+    mobileThumbnail: hillerLewisMobile,
+    thumbnailPosition: '50% 50%',
+    detailPosition: '50% 50%',
+    thumbnailFit: 'contain',
+    url: 'https://hillerlewisgroup.com/',
   },
   {
     slug: 'under-pressure',
@@ -1000,6 +995,23 @@ const projects = [
 ]
 
 const visibleProjects = projects.filter((project) => project.isVisible !== false)
+
+// Current thumbnail-based trail (the existing behavior) kept intact.
+const trailCurrent = visibleProjects.slice(0, 5).map((p) => p.thumbnail)
+
+// Interleave the color-profile groups round-robin so consecutive trail images
+// alternate profiles instead of clustering the same colors back-to-back.
+function interleave(groups) {
+  const out = []
+  const maxLen = Math.max(...groups.map((g) => g.length))
+  for (let i = 0; i < maxLen; i++) {
+    for (const g of groups) {
+      if (i < g.length) out.push(g[i])
+    }
+  }
+  return out
+}
+const trailAll = interleave([trailCurrent, trailWarm, trailCool, trailMixed])
 
 /* â"€â"€â"€ Custom "VIEW" cursor for work cards â"€â"€â"€ */
 function ViewCursor() {
@@ -1129,7 +1141,11 @@ function DesktopWorkStickyScroll() {
                       alt={`${project.title} thumbnail`}
                       className="work-scroll__thumbnail"
                       loading="lazy"
-                      style={{ objectPosition: project.thumbnailPosition }}
+                      style={{
+                        objectPosition: project.thumbnailPosition,
+                        ...(project.thumbnailFit ? { objectFit: project.thumbnailFit } : {}),
+                        ...(project.thumbnailScale ? { transform: `scale(${project.thumbnailScale})` } : {}),
+                      }}
                     />
                   </div>
                 </div>
@@ -1306,9 +1322,6 @@ function EmailIcon() {
 function Contact() {
   return (
     <section id="contact" className="contact">
-      <Reveal>
-        <span className="eyebrow">GET IN TOUCH</span>
-      </Reveal>
       <Reveal delay={100}>
         <h2 className="contact__heading">
           Got a project?<br />
@@ -1316,8 +1329,8 @@ function Contact() {
         </h2>
       </Reveal>
       <Reveal delay={200}>
-        <a href="mailto:webdesign@bychristopherli.com" className="contact__cta">
-          <span>webdesign@bychristopherli.com</span>
+        <a href="mailto:lichristopher2468@gmail.com" className="contact__cta">
+          <span>lichristopher2468@gmail.com</span>
           <span className="contact__cta-arrow">
             <span>&rarr;</span>
           </span>
@@ -1327,7 +1340,7 @@ function Contact() {
         <div className="contact__socials">
           <a href="https://www.linkedin.com/in/chrisjoshli/" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="LinkedIn"><LinkedInIcon /></a>
           <a href="https://github.com/cli2468" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="GitHub"><GitHubIcon /></a>
-          <a href="mailto:webdesign@bychristopherli.com" className="contact__social-icon" aria-label="Email"><EmailIcon /></a>
+          <a href="mailto:lichristopher2468@gmail.com" className="contact__social-icon" aria-label="Email"><EmailIcon /></a>
         </div>
       </Reveal>
     </section>
@@ -1551,7 +1564,7 @@ function AboutPage() {
                 <a href="https://github.com/cli2468" target="_blank" rel="noopener noreferrer" className="about__social-icon" aria-label="GitHub"><GitHubIcon /></a>
               </Reveal>
               <Reveal delay={320}>
-                <a href="mailto:webdesign@bychristopherli.com" className="about__social-icon" aria-label="Email"><EmailIcon /></a>
+                <a href="mailto:lichristopher2468@gmail.com" className="about__social-icon" aria-label="Email"><EmailIcon /></a>
               </Reveal>
             </div>
           </div>
@@ -1567,7 +1580,7 @@ function AboutPage() {
             </Reveal>
             <Reveal delay={80}>
               <p className="about__bio">
-                I've been early to most things I've gotten into - crypto before it blew up, beta tester for GPT before ChatGPT went public, e-commerce before I could legally sign a lease. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. Now I build websites. Whatever I'm doing next year might be different, but the way I get there won't be - I find things early, learn them fast, and make something real with them.
+                I've been early to most things I've gotten into - crypto before it blew up, beta tester for OpenAI before ChatGPT went public, and a six-figure e-commerce operation I built while still in high school. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. These days I build websites on the side - it's how I stay close to new tools and AI and keep learning by making something real. The subjects change, but the way I get there doesn't: I find things early, learn them fast, and build with them.
               </p>
             </Reveal>
           </div>
@@ -1618,36 +1631,6 @@ function AboutPage() {
                 </Reveal>
               ))}
             </div>
-          </div>
-
-          {/* Education */}
-          <div className="about__resume-section">
-            <Reveal>
-              <h2 className="about__section-heading">Education</h2>
-            </Reveal>
-            <Reveal delay={80}>
-              <div className="about__edu-entry">
-                <div className="about__exp-header">
-                  <div className="about__exp-left">
-                    <h3 className="about__exp-company">
-                      Indiana University Northwest
-                      <span className="about__exp-location"> / Gary, IN</span>
-                    </h3>
-                    <p className="about__exp-role">Bachelor of Science in Accounting</p>
-                  </div>
-                  <span className="about__exp-dates">Expected May 2026</span>
-                </div>
-                <p className="about__edu-meta">
-                  GPA: 3.91 / 4.00
-                  <span className="about__edu-sep"> Â· </span>
-                  CPA candidate eligible May 2026
-                  <span className="about__edu-sep"> Â· </span>
-                  Accounting Club
-                  <span className="about__edu-sep"> Â· </span>
-                  Investment Club
-                </p>
-              </div>
-            </Reveal>
           </div>
 
         </div>
