@@ -1580,7 +1580,7 @@ function AboutPage() {
             </Reveal>
             <Reveal delay={80}>
               <p className="about__bio">
-                I've been early to most things I've gotten into - crypto before it blew up, beta tester for OpenAI before ChatGPT went public, and a six-figure e-commerce operation I built while still in high school. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. These days I build websites on the side - it's how I stay close to new tools and AI and keep learning by making something real. The subjects change, but the way I get there doesn't: I find things early, learn them fast, and build with them.
+                I've been early to most things I've gotten into - beta tester for OpenAI before ChatGPT went public, crypto before it blew up, and a six-figure e-commerce operation I built while still in high school. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. These days I build websites on the side - it's how I stay close to new tools and AI and keep learning by making something real. The subjects change, but the way I get there doesn't: I find things early, learn them fast, and build with them.
               </p>
             </Reveal>
           </div>
