@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "capture": "node scripts/capture-responsive.mjs",
+    "capture:about": "node scripts/capture-responsive.mjs --name about-section --desktop-route /about --desktop-selector .about --skip-mobile"
   },
   "dependencies": {
     "animejs": "^4.4.1",
@@ -29,6 +31,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "playwright": "^1.62.0",
     "tailwindcss": "^3.4.19",
     "vite": "^5.4.21"
   }
