@@ -1329,8 +1329,8 @@ function Contact() {
         </h2>
       </Reveal>
       <Reveal delay={200}>
-        <a href="mailto:lichristopher2468@gmail.com" className="contact__cta">
-          <span>lichristopher2468@gmail.com</span>
+        <a href="mailto:webdesign@bychristopherli.com" className="contact__cta">
+          <span>webdesign@bychristopherli.com</span>
           <span className="contact__cta-arrow">
             <span>&rarr;</span>
           </span>
@@ -1340,7 +1340,7 @@ function Contact() {
         <div className="contact__socials">
           <a href="https://www.linkedin.com/in/chrisjoshli/" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="LinkedIn"><LinkedInIcon /></a>
           <a href="https://github.com/cli2468" target="_blank" rel="noopener noreferrer" className="contact__social-icon" aria-label="GitHub"><GitHubIcon /></a>
-          <a href="mailto:lichristopher2468@gmail.com" className="contact__social-icon" aria-label="Email"><EmailIcon /></a>
+          <a href="mailto:webdesign@bychristopherli.com" className="contact__social-icon" aria-label="Email"><EmailIcon /></a>
         </div>
       </Reveal>
     </section>
@@ -1564,7 +1564,7 @@ function AboutPage() {
                 <a href="https://github.com/cli2468" target="_blank" rel="noopener noreferrer" className="about__social-icon" aria-label="GitHub"><GitHubIcon /></a>
               </Reveal>
               <Reveal delay={320}>
-                <a href="mailto:lichristopher2468@gmail.com" className="about__social-icon" aria-label="Email"><EmailIcon /></a>
+                <a href="mailto:webdesign@bychristopherli.com" className="about__social-icon" aria-label="Email"><EmailIcon /></a>
               </Reveal>
             </div>
           </div>
