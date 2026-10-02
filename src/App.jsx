@@ -10,6 +10,7 @@ import visionThumb from './assets/WorksThumbnails/Vision.webp'
 import royalTeaThumb from './assets/WorksThumbnails/RoyalTea.webp'
 import ffaThumb from './assets/WorksThumbnails/ffadesktop.webp'
 import hillerLewisThumb from './assets/WorksThumbnails/HillerLewis.webp'
+import baobabThumb from './assets/WorksThumbnails/Baobab.jpg'
 import underPressureMobile from './assets/WorksThumbnails/mobile/UnderPressureMobile.webp'
 import greenWitchCafeMobile from './assets/WorksThumbnails/mobile/GWCMobile.webp'
 import mrMillerMobile from './assets/WorksThumbnails/mobile/MMDetailingMobile.webp'
@@ -17,6 +18,7 @@ import visionMobile from './assets/WorksThumbnails/mobile/VisionMobile.webp'
 import royalTeaMobile from './assets/WorksThumbnails/mobile/RoyalTeaMobile.webp'
 import ffaMobile from './assets/WorksThumbnails/mobile/ffamobile.webp'
 import hillerLewisMobile from './assets/WorksThumbnails/mobile/HillerLewisMobile.webp'
+import baobabMobile from './assets/WorksThumbnails/mobile/BaobabMobile.jpg'
 
 /* â”€â”€â”€ Cursor-trail images, grouped by color profile â”€â”€â”€ */
 // Warm (peach / orange / red) â€" Royal Tea
@@ -35,7 +37,6 @@ import trailMixedFFA from './assets/CursorTrail/Screenshot 2026-06-23 235234.web
 import VerticalCutReveal from './components/VerticalCutReveal'
 import CSSBox from './components/CSSBox'
 import ImageTrail from './components/ImageTrail'
-import { Signature, SIGNATURE_TOTAL_MS } from './components/Signature'
 import './App.css'
 
 /* â”€â”€â”€ Cursor-trail color-profile groups (kept separate so each can be used on its own) â”€â”€â”€ */
@@ -717,27 +718,65 @@ function Hero({ playReveal = true }) {
 }
 
 function IntroPreloader({ onComplete }) {
+  const [display, setDisplay] = useState('')
+  const [charIndex, setCharIndex] = useState(0)
+  const [phase, setPhase] = useState('typing')
   const [isExiting, setIsExiting] = useState(false)
   const [prefersReducedMotion] = useState(() => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
   })
 
-  // Reduced motion: skip the draw, just flash the (static) signature and exit.
   useEffect(() => {
     if (prefersReducedMotion) {
-      const exitTimer = setTimeout(() => setIsExiting(true), 320)
-      const completeTimer = setTimeout(onComplete, 440)
+      const revealTimer = setTimeout(() => setDisplay(INTRO_NAME), 80)
+      const exitTimer = setTimeout(() => setIsExiting(true), 240)
+      const completeTimer = setTimeout(onComplete, 360)
+
       return () => {
+        clearTimeout(revealTimer)
         clearTimeout(exitTimer)
         clearTimeout(completeTimer)
       }
     }
 
-    // Draw the signature, hold briefly, then begin the exit slide.
-    const HOLD_AFTER_DRAW_MS = 340
-    const exitTimer = setTimeout(() => setIsExiting(true), SIGNATURE_TOTAL_MS + HOLD_AFTER_DRAW_MS)
-    return () => clearTimeout(exitTimer)
-  }, [onComplete, prefersReducedMotion])
+    if (phase === 'typing') {
+      if (charIndex < INTRO_NAME.length) {
+        const next = charIndex + 1
+        const t = setTimeout(() => {
+          setDisplay(INTRO_NAME.slice(0, next))
+          setCharIndex(next)
+        }, charIndex === 0 ? 185 : 60)
+        return () => clearTimeout(t)
+      }
+
+      setPhase('pausing')
+      return
+    }
+
+    if (phase === 'pausing') {
+      const t = setTimeout(() => setPhase('deleting'), 650)
+      return () => clearTimeout(t)
+    }
+
+    if (phase === 'deleting') {
+      if (charIndex > 0) {
+        const next = charIndex - 1
+        const t = setTimeout(() => {
+          setDisplay(INTRO_NAME.slice(0, next))
+          setCharIndex(next)
+        }, 35)
+        return () => clearTimeout(t)
+      }
+
+      setPhase('exiting')
+      return
+    }
+
+    if (phase === 'exiting') {
+      const t = setTimeout(() => setIsExiting(true), 160)
+      return () => clearTimeout(t)
+    }
+  }, [charIndex, onComplete, phase, prefersReducedMotion])
 
   useEffect(() => {
     if (!isExiting || prefersReducedMotion) return
@@ -750,7 +789,13 @@ function IntroPreloader({ onComplete }) {
     <div className={`intro-preloader${isExiting ? ' intro-preloader--exit' : ''}`} role="status" aria-live="polite">
       <span className="sr-only">Loading {INTRO_NAME} portfolio.</span>
       <div className="intro-preloader__inner" aria-hidden="true">
-        <Signature className="intro-preloader__signature" start={!prefersReducedMotion} static={prefersReducedMotion} />
+        <div className="intro-preloader__line">
+          <span className="intro-preloader__measure">{INTRO_NAME}|</span>
+          <span className="intro-preloader__content">
+            <span className="intro-preloader__typed">{display}</span>
+            <span className="intro-preloader__cursor">|</span>
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -929,6 +974,18 @@ const projects = [
     thumbnailPosition: '50% 50%',
     detailPosition: '50% 50%',
     url: 'https://royalteaone.com/',
+  },
+  {
+    slug: 'baobab',
+    title: 'BAOBAB COMMUNITY & DEVELOPMENT CORPORATION',
+    category: 'In Progress / Client Website',
+    year: '2026',
+    desc: 'A new website in the works for a Gary-based community development organization, built around the belief that the city\'s growth should include its residents.',
+    thumbnail: baobabThumb,
+    mobileThumbnail: baobabMobile,
+    thumbnailPosition: '50% 50%',
+    detailPosition: '50% 50%',
+    url: 'https://baobab.bychristopherli.com',
   },
   {
     slug: 'hiller-lewis',
@@ -1580,7 +1637,7 @@ function AboutPage() {
             </Reveal>
             <Reveal delay={80}>
               <p className="about__bio">
-                I've been early to most things I've gotten into - crypto before it blew up, beta tester for OpenAI before ChatGPT went public, and a six-figure e-commerce operation I built while still in high school. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. These days I build websites on the side - it's how I stay close to new tools and AI and keep learning by making something real. The subjects change, but the way I get there doesn't: I find things early, learn them fast, and build with them.
+                I've been early to most things I've gotten into - beta tester for OpenAI before ChatGPT went public, crypto before it blew up, and a six-figure e-commerce operation I built while still in high school. Taught myself all of it off YouTube and the internet, turned a reselling operation into $300K in revenue, and paid for my own college along the way. These days I build websites on the side - it's how I stay close to new tools and AI and keep learning by making something real. The subjects change, but the way I get there doesn't: I find things early, learn them fast, and build with them.
               </p>
             </Reveal>
           </div>
